@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Каталог спутниковых данных для геологических исследований. Поиск, просмотр и скачивание.">
+  <title>Спутниковые данные · GeologyScience.ru</title>
+  <link rel="stylesheet" href="/vendor/maplibre-gl.css">
+  <link rel="stylesheet" href="/app.css">
+  <script defer src="/vendor/maplibre-gl.js"></script>
+  <script defer src="/app.js"></script>
+</head>
+<body>
+  <header class="portal">
+    <div class="portal-inner">
+      <a class="brand" href="https://geologyscience.ru/" aria-label="На портал GeologyScience.ru"><span aria-hidden="true">G</span>eologyScience.ru</a>
+      <a class="portal-return" href="https://geologyscience.ru/">На портал <span aria-hidden="true">↗</span></a>
+    </div>
+  </header>
+  <main class="shell">
+    <section class="intro">
+      <div>
+        <p class="eyebrow">Данные для геологических исследований</p>
+        <h1>Спутниковые данные</h1>
+        <p>Выберите продукт, область и даты съёмки. Просмотрите сцены и скачайте нужные файлы.</p>
+      </div>
+      <p class="provider">Источник: <a href="https://planetarycomputer.microsoft.com/catalog" target="_blank" rel="noopener">Microsoft Planetary Computer <span aria-hidden="true">↗</span></a></p>
+    </section>
+
+    <div class="workspace">
+      <aside class="panel catalog" aria-labelledby="catalog-title">
+        <h2 id="catalog-title">Каталог продуктов</h2>
+        <label class="field">
+          <span>Применение в геологии</span>
+          <select id="tag"><option value="">Все применения</option></select>
+        </label>
+        <div id="products" aria-label="Продукты"><p class="muted">Загружаем каталог…</p></div>
+      </aside>
+
+      <div class="work-area">
+        <section id="selected" class="panel product-detail" aria-labelledby="product-name" hidden>
+          <div class="product-heading"><h2 id="product-name"></h2><span id="product-spec" class="tag"></span></div>
+          <p id="product-level" class="muted"></p>
+          <p id="product-summary"></p>
+          <p id="product-caveat" class="muted"></p>
+          <button id="product-source" class="link-button" type="button" aria-haspopup="dialog">О продукте у поставщика</button>
+        </section>
+
+        <section class="panel search-area" aria-labelledby="search-title">
+          <form id="search-form">
+            <h2 id="search-title">Территория и период</h2>
+            <div class="filters">
+              <label class="field region">
+                <span>Регион</span>
+                <select id="region">
+                  <option value="">Выберите регион</option>
+                  <option value="primorye">Приморский край</option>
+                  <option value="kamchatka">Камчатка</option>
+                  <option value="kurils">Курильские острова</option>
+                  <option value="altai">Горный Алтай</option>
+                  <option value="caucasus">Северный Кавказ</option>
+                  <option value="urals">Средний Урал</option>
+                  <option value="custom">Своя область</option>
+                </select>
+              </label>
+              <div class="dates" id="dates">
+                <label class="field"><span>Дата с</span><input type="date" id="start" required></label>
+                <label class="field"><span>Дата по</span><input type="date" id="end" required></label>
+              </div>
+              <p class="muted" id="undated" hidden>Поиск плиток модели по территории</p>
+              <button type="submit" class="primary" id="search-button" disabled>Найти данные</button>
+            </div>
+            <details class="coords">
+              <summary>Координаты области</summary>
+              <div class="coord-fields">
+                <label class="field"><span>Запад, °</span><input id="west" type="number" step="any" min="-180" max="180"></label>
+                <label class="field"><span>Юг, °</span><input id="south" type="number" step="any" min="-90" max="90"></label>
+                <label class="field"><span>Восток, °</span><input id="east" type="number" step="any" min="-180" max="180"></label>
+                <label class="field"><span>Север, °</span><input id="north" type="number" step="any" min="-90" max="90"></label>
+              </div>
+            </details>
+            <p id="search-error" role="alert" hidden></p>
+          </form>
+          <div class="map-frame">
+            <div id="map" aria-label="Карта области поиска"></div>
+            <div id="map-toolbar" class="map-toolbar" hidden>
+              <button type="button" id="draw" aria-pressed="false">Выделить область</button>
+              <button type="button" id="view-bounds">Использовать вид карты</button>
+            </div>
+            <div id="map-legend" class="map-legend" hidden>
+              <span id="legend-area" hidden>Область поиска</span>
+              <span id="legend-scene" hidden>Охват сцены</span>
+            </div>
+            <p id="map-note" class="map-note" role="status" hidden></p>
+          </div>
+        </section>
+
+        <section class="panel results" aria-labelledby="results-title">
+          <div class="results-heading">
+            <h2 id="results-title">Результаты поиска</h2>
+            <p class="muted" id="result-status" role="status">Укажите область и выполните поиск.</p>
+          </div>
+          <div class="results-body" id="results-body" hidden>
+            <div class="scene-list">
+              <div id="items" aria-label="Наблюдения и плитки"></div>
+              <button type="button" id="more" hidden>Загрузить ещё</button>
+            </div>
+            <div class="scene-detail" id="scene" aria-live="polite">
+              <p class="muted">Выберите запись для просмотра файлов.</p>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+    <footer><a href="https://geologyscience.ru/satellite_data_api/">О спутниковом разделе GeologyScience</a></footer>
+  </main>
+  <dialog id="info-card" aria-labelledby="info-title">
+    <header class="info-header">
+      <div><p id="info-subtitle" class="eyebrow"></p><h2 id="info-title"></h2></div>
+      <form method="dialog"><button type="submit" autofocus>Закрыть</button></form>
+    </header>
+    <div id="info-body" class="info-body"></div>
+    <div class="info-footer"><a id="info-source" target="_blank" rel="noopener"></a></div>
+  </dialog>
+</body>
+</html>

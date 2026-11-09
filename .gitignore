@@ -1,0 +1,29 @@
+# Локальная конфигурация
+.env
+.env.*
+*.env
+!example.env
+
+# Python и локальные зависимости
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+static/vendor/
+
+# Редакторы и ОС
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Локальные файлы агентов
+AGENTS.md
+CLAUDE.md
+GEMINI.md
+.agents/
+.claude/
+.codex/
+.cursor/

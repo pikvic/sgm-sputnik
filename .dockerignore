@@ -1,0 +1,8 @@
+**
+!Dockerfile
+!app.py
+!catalog.py
+!static/
+!static/index.html
+!static/app.css
+!static/app.js

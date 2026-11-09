@@ -1,0 +1,10 @@
+name: sputnik
+
+services:
+  sputnik:
+    build: .
+    ports:
+      - target: 8080
+        published: "${SPUTNIK_PORT:-18080}"
+        host_ip: "${SPUTNIK_BIND_HOST:-127.0.0.1}"
+    restart: unless-stopped
