@@ -8,3 +8,52 @@ services:
         published: "${SPUTNIK_PORT:-18080}"
         host_ip: "${SPUTNIK_BIND_HOST:-127.0.0.1}"
     restart: unless-stopped
+    environment:
+      PGHOST: db
+      PGUSER: sputnik
+      PGPASSWORD: "${POSTGRES_PASSWORD:?Задайте POSTGRES_PASSWORD в .env}"
+      DATABASE_URL: "${DATABASE_URL:-}"
+      SPUTNIK_PORT: "${SPUTNIK_PORT:-18080}"
+      APP_URL: "${APP_URL:-}"
+      AI_BASE_URL: "${AI_BASE_URL:-https://api.deepseek.com}"
+      AI_API_KEY: "${AI_API_KEY:-}"
+      AI_LOCAL_MODE: "${AI_LOCAL_MODE:-false}"
+      AI_MODEL: "${AI_MODEL:-deepseek-flash}"
+      AI_REASONING_EFFORT: "${AI_REASONING_EFFORT:-}"
+      AI_MAX_OUTPUT_TOKENS: "${AI_MAX_OUTPUT_TOKENS:-4096}"
+      AI_MAX_PROMPT_BYTES: "${AI_MAX_PROMPT_BYTES:-30000}"
+      AI_SESSION_TOKENS: "${AI_SESSION_TOKENS:-60000}"
+      AI_ANON_DAILY_TOKENS: "${AI_ANON_DAILY_TOKENS:-200000}"
+      AI_SESSION_REQUESTS: "${AI_SESSION_REQUESTS:-30}"
+      AI_IP_DAILY_REQUESTS: "${AI_IP_DAILY_REQUESTS:-40}"
+      TRUSTED_PROXY_NETWORKS: "${TRUSTED_PROXY_NETWORKS:-}"
+      AI_TIMEOUT_SECONDS: "${AI_TIMEOUT_SECONDS:-40}"
+      SESSION_DAYS: "${SESSION_DAYS:-1}"
+      TELEMETRY_DAYS: "${TELEMETRY_DAYS:-30}"
+      YANDEX_CLIENT_ID: "${YANDEX_CLIENT_ID:-}"
+      YANDEX_CLIENT_SECRET: "${YANDEX_CLIENT_SECRET:-}"
+      ADMIN_YANDEX_IDS: "${ADMIN_YANDEX_IDS:-}"
+      GEOCODER_URL: "${GEOCODER_URL:-https://nominatim.openstreetmap.org}"
+      GEOCODER_USER_AGENT: "${GEOCODER_USER_AGENT:-}"
+      GEOCODER_ATTRIBUTION: "${GEOCODER_ATTRIBUTION:-© OpenStreetMap contributors}"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: sputnik
+      POSTGRES_DB: sputnik
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?Задайте POSTGRES_PASSWORD в .env}"
+    volumes:
+      - sputnik-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sputnik -d sputnik"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  sputnik-db:

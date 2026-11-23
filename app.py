@@ -3,6 +3,7 @@ import logging
 import math
 import mimetypes
 import re
+import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date
 from functools import cache
@@ -23,9 +24,12 @@ STATIC = {
     "/": "index.html",
     "/app.css": "app.css",
     "/app.js": "app.js",
+    "/assistant-ui.js": "assistant-ui.js",
     "/vendor/maplibre-gl.js": "vendor/maplibre-gl.js",
     "/vendor/maplibre-gl.css": "vendor/maplibre-gl.css",
     "/vendor/LICENSE.txt": "vendor/LICENSE.txt",
+    "/vendor/markdown-it.min.js": "vendor/markdown-it.min.js",
+    "/vendor/markdown-it-LICENSE.txt": "vendor/markdown-it-LICENSE.txt",
 }
 
 
@@ -113,12 +117,24 @@ def summary(item):
         "cloud": props.get("eo:cloud_cover"),
         "bbox": item.get("bbox"),
         "geometry": item.get("geometry"),
+        "assets": [key for key, asset in item.get("assets", {}).items() if downloadable(asset)],
+        "polarizations": props.get("sar:polarizations"),
+        "orbit": props.get("sat:orbit_state"),
     }
 
 
 def search(params):
     product = product_for(params)
     query = {"collections": product["collection"], "bbox": bbox_for(params.get("bbox", "")), "limit": 20}
+    region = None
+    if params.get("region"):
+        from research_context import clean_geometry
+        if len(params["region"]) > 16000:
+            raise ApiError(400, "Слишком сложная область поиска.")
+        try:
+            region = clean_geometry(json.loads(params["region"]))
+        except (ValueError, TypeError, KeyError) as error:
+            raise ApiError(400, "Некорректный полигон области поиска.") from error
     interval = search_dates(params, product)
     if interval == "":
         return {"items": [], "next": None, "reason": "outside_archive"}
@@ -134,7 +150,14 @@ def search(params):
         if link.get("rel") == "next":
             token = parse_qs(urlsplit(link["href"]).query).get("token", [None])[0]
             break
-    return {"items": [summary(item) for item in payload["features"]], "next": token}
+    items = [summary(item) for item in payload["features"]]
+    if region:
+        from assistant import overlap
+        bbox = list(map(float, query["bbox"].split(",")))
+        for item in items:
+            item["overlap_percent"] = overlap(item["geometry"], bbox, region)
+        items = [item for item in items if item["overlap_percent"] != 0]
+    return {"items": items, "next": token}
 
 
 def item_for(params):
@@ -267,6 +290,19 @@ def json_response(start, data, status=200):
 
 
 def application(environ, start):
+    path = environ["PATH_INFO"]
+    if path.startswith(("/api/assistant/", "/auth/", "/api/admin/")) or path in ("/api/geocode", "/api/events"):
+        from assistant_routes import route
+        return route(environ, start)
+    started = time.monotonic()
+    def logged_start(status, headers, exc_info=None):
+        from assistant_routes import log_service
+        log_service(environ, int(status.split()[0]), int((time.monotonic() - started) * 1000))
+        return start(status, headers, exc_info)
+    return catalog_application(environ, logged_start)
+
+
+def catalog_application(environ, start):
     try:
         if environ["REQUEST_METHOD"] != "GET":
             raise ApiError(405, "Поддерживаются только GET-запросы.")

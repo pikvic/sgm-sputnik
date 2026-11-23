@@ -8,16 +8,21 @@
   <link rel="stylesheet" href="/vendor/maplibre-gl.css">
   <link rel="stylesheet" href="/app.css">
   <script defer src="/vendor/maplibre-gl.js"></script>
+  <script defer src="/vendor/markdown-it.min.js"></script>
   <script defer src="/app.js"></script>
 </head>
 <body>
   <header class="portal">
     <div class="portal-inner">
       <a class="brand" href="https://geologyscience.ru/" aria-label="На портал GeologyScience.ru"><span aria-hidden="true">G</span>eologyScience.ru</a>
-      <a class="portal-return" href="https://geologyscience.ru/">На портал <span aria-hidden="true">↗</span></a>
+      <nav class="mode-switch" aria-label="Режим работы">
+        <button type="button" id="manual-mode" aria-pressed="true" aria-controls="manual-workspace">Ручной поиск</button>
+        <button type="button" id="assistant-mode" aria-pressed="false" aria-controls="assistant-workspace">ИИ-помощник</button>
+      </nav>
+      <a class="portal-return" href="https://geologyscience.ru/">На портал</a>
     </div>
   </header>
-  <main class="shell">
+  <main class="shell" id="manual-workspace">
     <section class="intro">
       <div>
         <p class="eyebrow">Данные для геологических исследований</p>
@@ -114,6 +119,85 @@
     </div>
     <footer><a href="https://geologyscience.ru/satellite_data_api/">О спутниковом разделе GeologyScience</a></footer>
   </main>
+  <section id="assistant-workspace" class="shell assistant-workspace" aria-labelledby="assistant-title" hidden>
+    <div class="assistant-page-heading">
+      <div><p class="eyebrow">От вопроса к спутниковым данным</p><h1 id="assistant-title">Подбор с помощником</h1></div>
+      <p class="provider">Источник: <a href="https://planetarycomputer.microsoft.com/catalog" target="_blank" rel="noopener">Microsoft Planetary Computer</a></p>
+    </div>
+    <div class="assistant-layout">
+      <section class="panel assistant-chat" aria-label="Диалог с помощником">
+        <header class="assistant-heading">
+          <div><h2>Обсудите свою задачу</h2><p id="assistant-account" class="muted">Подключаем сессию…</p></div>
+          <div class="assistant-actions">
+            <a id="assistant-login" href="/auth/login" hidden>Войти через Яндекс</a>
+            <button type="button" id="assistant-logout" class="link-button" hidden>Выйти</button>
+            <button type="button" id="assistant-admin" class="link-button" hidden>Телеметрия</button>
+          </div>
+        </header>
+        <div class="assistant-notices">
+          <details><summary>О передаче данных и ограничениях помощника</summary><p class="cloud-disclosure" id="assistant-disclosure"></p></details>
+          <label id="assistant-consent-row" class="assistant-check" hidden><input id="assistant-consent" type="checkbox"><span id="assistant-consent-label"></span></label>
+          <p id="assistant-role-note" class="muted" hidden></p>
+        </div>
+        <div class="assistant-scroll" id="assistant-scroll">
+          <div id="assistant-welcome" class="assistant-welcome">
+            <span class="assistant-symbol" aria-hidden="true">✦</span>
+            <h2>Что вы хотите исследовать?</h2>
+            <p>Назовите объект и опишите, что хотите наблюдать. Помощник предложит продукты, область и период и объяснит свой выбор.</p>
+            <div class="example-prompts">
+              <button type="button" data-prompt="Хочу изучить изменения вокруг бывшего карьера Старая Линза. Какие спутниковые данные подойдут? Радиус поиска 20 км.">Изменения у бывшего карьера</button>
+              <button type="button" data-prompt="Какие данные помогут изучить поверхностные проявления вулканической активности на Камчатке?">Вулканическая активность</button>
+            </div>
+            <p class="muted">Вы подтверждаете параметры перед поиском. Геологические выводы остаются за исследователем.</p>
+          </div>
+          <div id="assistant-messages" class="assistant-messages" aria-live="polite" aria-relevant="additions"></div>
+          <div id="assistant-thinking" class="assistant-thinking" role="status" hidden><span class="spinner" aria-hidden="true"></span><div><strong>Помощник готовит ответ</strong><p id="assistant-thinking-detail" class="muted">Уточняет контекст и проверяет справочную базу…</p></div><span id="assistant-elapsed" class="muted"></span></div>
+          <p id="assistant-status" class="assistant-status" role="status"></p>
+        </div>
+        <form id="assistant-form" class="assistant-composer">
+          <label class="field"><span>Сообщение помощнику</span><textarea id="assistant-input" maxlength="2000" rows="3" placeholder="Например: нужны данные по месторождению Мир за лето 2025 года и территории в радиусе 20 км" required></textarea></label>
+          <div class="composer-bottom"><p class="muted"><kbd>Ctrl</kbd> + <kbd>Enter</kbd> — отправить · Enter — новая строка</p><button type="submit" id="assistant-send" class="primary" disabled>Отправить</button></div>
+          <div class="composer-meta"><p id="assistant-budget" class="muted"></p><button type="button" id="assistant-reset" class="link-button">Новый диалог</button></div>
+        </form>
+      </section>
+      <aside class="panel research-panel" aria-labelledby="research-title">
+        <header class="research-heading"><div><h2 id="research-title">Контекст исследования</h2><p class="muted">Одна задача · объекты · продукты</p></div><button id="research-add" type="button">+ Объект</button></header>
+        <div class="research-scroll">
+          <label class="field research-goal"><span>Общая исследовательская задача</span><textarea id="task-goal" maxlength="600" rows="2" placeholder="Что вы хотите исследовать"></textarea></label>
+          <div id="research-searches" class="research-searches"></div>
+          <section id="research-editor" class="research-editor" aria-label="Контекст выбранного поиска">
+            <label class="field"><span>Объект исследования</span><input id="task-target" maxlength="600" placeholder="Название объекта или местности"></label>
+            <div class="assistant-actions"><button type="button" id="research-add-product">+ Продукт для объекта</button><button type="button" id="research-delete-object" class="link-button">Удалить объект</button></div>
+            <details id="geocode-details"><summary>Найти или уточнить объект</summary>
+              <div class="assistant-geocoder">
+                <label class="field"><span>Название или синоним</span><input id="geocode-query" maxlength="180" placeholder="Месторождение, рудник, карьер…"></label>
+                <div class="assistant-actions"><button type="button" id="geocode-search">Найти объект</button><button type="button" id="geocode-reverse">В центре карты</button></div>
+                <p class="muted">Поиск: справочник геологических объектов, OpenStreetMap, затем Wikidata. Название передаётся внешнему источнику при необходимости.</p>
+                <p id="geocode-status" class="muted" role="status"></p><div id="geocode-results"></div>
+              </div>
+            </details>
+            <div id="research-context-details" class="research-context-details"></div>
+            <details id="research-parameters"><summary>Изменить параметры поиска</summary>
+              <div class="research-parameter-fields">
+                <label class="field"><span>Спутниковый продукт</span><select id="research-product"><option value="">Пока не выбран</option></select></label>
+                <div class="research-dates"><label class="field"><span>Дата с</span><input type="date" id="research-start"></label><label class="field"><span>Дата по</span><input type="date" id="research-end"></label></div>
+                <label class="field"><span>Радиус вокруг точки объекта, км</span><input id="research-radius" type="number" min="0.1" max="500" step="0.1" placeholder="Сначала найдите объект"></label>
+                <button type="button" id="research-from-manual">Взять область из ручного поиска</button>
+              </div>
+            </details>
+            <p id="research-note" class="muted" role="status"></p>
+            <div class="research-primary-actions"><button type="button" id="research-confirm">Подтвердить параметры</button><button type="button" id="research-search" class="primary" disabled>Найти сцены</button></div>
+            <div class="assistant-actions"><button type="button" id="assistant-scenes" disabled>Объяснить выбор сцен</button><button type="button" id="research-delete" class="link-button">Удалить продукт</button></div>
+          </section>
+        </div>
+        <div class="research-map-section">
+          <div class="research-map-heading"><strong>Объект и область поиска</strong><button type="button" id="research-map-fit" class="link-button">Показать всё</button></div>
+          <div class="research-map-frame"><div id="research-map" aria-label="Карта объектов исследования и областей поиска"></div><p id="research-map-note" class="map-note" hidden></p></div>
+          <div class="research-map-footer"><div class="assistant-actions"><button type="button" id="research-draw" aria-pressed="false">Выделить область</button><button type="button" id="research-view">Вид карты</button></div><p class="muted"><span class="map-key object-key"></span> Точка объекта <span class="map-key region-key"></span> Область поиска</p></div>
+        </div>
+      </aside>
+    </div>
+  </section>
   <dialog id="info-card" aria-labelledby="info-title">
     <header class="info-header">
       <div><p id="info-subtitle" class="eyebrow"></p><h2 id="info-title"></h2></div>
@@ -122,5 +206,6 @@
     <div id="info-body" class="info-body"></div>
     <div class="info-footer"><a id="info-source" target="_blank" rel="noopener"></a></div>
   </dialog>
+  <script defer src="/assistant-ui.js"></script>
 </body>
 </html>

@@ -23,6 +23,7 @@ let detailRequest;
 let searchParams;
 let nextPage;
 let count = 0;
+let researchAOI = null;
 
 function node(tag, value, className) {
   const element = document.createElement(tag);
@@ -59,6 +60,7 @@ function clearResults() {
   $("results-body").hidden = true;
   $("more").hidden = true;
   $("search-button").disabled = !product;
+  window.dispatchEvent(new Event("sputnik:form-changed"));
 }
 
 function chooseProduct(item) {
@@ -171,6 +173,7 @@ function showSceneOnMap(item, tilejson) {
 }
 
 function setArea(box, region, focus) {
+  researchAOI = null;
   coordFields.forEach((field, index) => { field.value = box ? Number(box[index].toFixed(6)) : ""; });
   $("region").value = region;
   setGeometry("search-area", box ? boxGeometry(box) : null);
@@ -580,6 +583,7 @@ $("region").addEventListener("change", event => {
 });
 for (const field of coordFields) {
   field.addEventListener("change", () => {
+    researchAOI = null;
     toggleDraw(false);
     $("region").value = "custom";
     const area = currentArea();
@@ -613,10 +617,11 @@ $("search-form").addEventListener("submit", async event => {
     return;
   }
   toggleDraw(false);
-  setGeometry("search-area", boxGeometry(bbox));
+  setGeometry("search-area", researchAOI || boxGeometry(bbox));
   focusArea(bbox);
   const [start, end] = dateFields.map(field => field.value);
   searchParams = {product: product.id, bbox: bbox.join(",")};
+  if (researchAOI) searchParams.region = JSON.stringify(researchAOI);
   if (product.start) Object.assign(searchParams, {start, end});
   await loadResults();
   if (searchParams) $("results-title").scrollIntoView({block: "nearest"});
@@ -640,6 +645,7 @@ request("/api/catalog").then(data => {
   const tags = [...new Set(catalog.flatMap(item => item.tags))];
   for (const tag of tags) $("tag").append(new Option(tag, tag));
   renderCatalog();
+  window.dispatchEvent(new Event("sputnik:catalog-ready"));
 }).catch(error => {
   $("products").replaceChildren(node("p", error.message, "muted"));
 });
